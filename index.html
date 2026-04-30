@@ -65,10 +65,17 @@ body {
   background: #333;
 }
 
-/* Game Screen */
-.game {
+/* Game Viewer */
+#gameView {
   display: none;
   height: 100vh;
+  position: relative;
+}
+
+#gameFrame {
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
 .back-btn {
@@ -79,6 +86,7 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
+  z-index: 10;
 }
 </style>
 </head>
@@ -93,97 +101,64 @@ body {
   <h2 style="margin-bottom:10px;">Choose Your Survival</h2>
   <div class="grid">
 
-    <div class="game-btn" onclick="openGame('zombie')">🧟 Zombie Attack</div>
-    <div class="game-btn" onclick="openGame('alien')">👽 Alien Invasion</div>
-    <div class="game-btn" onclick="openGame('nuclear')">☢️ Nuclear Attack</div>
-    <div class="game-btn" onclick="openGame('last')">🧍 Last Human</div>
-    <div class="game-btn" onclick="openGame('ai')">🤖 AI Takeover</div>
-    <div class="game-btn" onclick="openGame('cyclone')">🌪 Cyclone</div>
-    <div class="game-btn" onclick="openGame('ice')">❄️ Ice Age</div>
-    <div class="game-btn" onclick="openGame('heat')">🔥 Heat Wave</div>
-    <div class="game-btn" onclick="openGame('emp')">📡 EMP Collapse</div>
-    <div class="game-btn" onclick="openGame('food')">🍞 Food Crisis</div>
-    <div class="game-btn" onclick="openGame('flood')">🌊 Flood</div>
-    <div class="game-btn" onclick="openGame('virus')">🦠 Virus Quarantine</div>
+    <!-- 🔥 PUT YOUR GAME URLs HERE -->
+    <div class="game-btn" onclick="openGame(GAMES.zombie)">🧟 Zombie Attack</div>
+    <div class="game-btn" onclick="openGame(GAMES.alien)">👽 Alien Invasion</div>
+    <div class="game-btn" onclick="openGame(GAMES.nuclear)">☢️ Nuclear Attack</div>
+    <div class="game-btn" onclick="openGame(GAMES.last)">🧍 Last Human</div>
+    <div class="game-btn" onclick="openGame(GAMES.ai)">🤖 AI Takeover</div>
+    <div class="game-btn" onclick="openGame(GAMES.cyclone)">🌪 Cyclone</div>
+    <div class="game-btn" onclick="openGame(GAMES.ice)">❄️ Ice Age</div>
+    <div class="game-btn" onclick="openGame(GAMES.heat)">🔥 Heat Wave</div>
+    <div class="game-btn" onclick="openGame(GAMES.emp)">📡 EMP Collapse</div>
+    <div class="game-btn" onclick="openGame(GAMES.food)">🍞 Food Crisis</div>
+    <div class="game-btn" onclick="openGame(GAMES.flood)">🌊 Flood</div>
+    <div class="game-btn" onclick="openGame(GAMES.virus)">🦠 Virus Quarantine</div>
 
   </div>
 </div>
 
-<!-- ================= GAMES ================= -->
-
-<!-- Example Game Container -->
-<div id="zombie" class="game">
+<!-- Game Viewer -->
+<div id="gameView">
   <div class="back-btn" onclick="goBack()">⬅ Back</div>
-
-  <!-- 🔥 PASTE YOUR ZOMBIE GAME CODE HERE -->
-  <div style="padding-top:50px; text-align:center;">Zombie Game Loaded</div>
-
+  <iframe id="gameFrame"></iframe>
 </div>
-
-<div id="alien" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-  <!-- PASTE ALIEN GAME -->
-</div>
-
-<div id="nuclear" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="last" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="ai" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="cyclone" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="ice" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="heat" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="emp" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="food" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="flood" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<div id="virus" class="game">
-  <div class="back-btn" onclick="goBack()">⬅ Back</div>
-</div>
-
-<!-- ================= SCRIPT ================= -->
 
 <script>
+// ================== 🔥 ADD YOUR GAME LINKS HERE ==================
+const GAMES = {
+  zombie: "game/zombie.html",
+  alien: "game/alien.html",
+  nuclear: "game/nuclear.html",
+  last: "game/last.html",
+  ai: "game/ai.html",
+  cyclone: "game/cyclone.html",
+  ice: "game/ice.html",
+  heat: "game/heat.html",
+  emp: "game/emp.html",
+  food: "game/food.html",
+  flood: "game/flood.html",
+  virus: "game/virus.html"
+};
+// ================================================================
+
 // Show menu after welcome
 setTimeout(() => {
   document.getElementById("menu").style.display = "block";
 }, 2500);
 
 // Open Game
-function openGame(id) {
+function openGame(url) {
   document.getElementById("menu").style.display = "none";
-  document.querySelectorAll(".game").forEach(g => g.style.display = "none");
-  document.getElementById(id).style.display = "block";
+  document.getElementById("gameView").style.display = "block";
+  document.getElementById("gameFrame").src = url;
 }
 
 // Back to menu
 function goBack() {
-  document.querySelectorAll(".game").forEach(g => g.style.display = "none");
+  document.getElementById("gameView").style.display = "none";
   document.getElementById("menu").style.display = "block";
+  document.getElementById("gameFrame").src = "";
 }
 </script>
 
