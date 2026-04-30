@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Crisis Survival Game</title>
+
+<style>
+* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+body {
+margin: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+color: #2d2d2d;
+overflow: hidden;
+}
+body::before {
+content: "";
+position: absolute;
+width: 200%;
+height: 200%;
+background: linear-gradient(120deg,#fff3e0,#e8f5e9,#e3f2fd);
+animation: bgMove 18s ease infinite;
+z-index: -1;
+}
+@keyframes bgMove {
+0% { transform: translate(0,0); }
+50% { transform: translate(-10%,-10%); }
+100% { transform: translate(0,0); }
+}
+.game {
+width: 95%;
+max-width: 650px;
+padding: 20px;
+border-radius: 18px;
+background: rgba(255,255,255,0.75);
+backdrop-filter: blur(12px);
+box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+position: relative;
+z-index: 2;
+}
+.topbar {
+display: flex;
+justify-content: space-between;
+font-size: 14px;
+}
+h2 { text-align: center; margin: 15px 0; }
+.choices button {
+width: 100%;
+padding: 12px;
+margin: 6px 0;
+border: none;
+border-radius: 12px;
+background: #eceff1;
+cursor: pointer;
+transition: 0.2s;
+}
+.choices button:hover { background: #cfd8dc; }
+.controls {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+}
+.controls button {
+flex: 1;
+padding: 10px;
+border-radius: 10px;
+border: none;
+background: #dde3e6;
+cursor: pointer;
+}
+.celebration {
+position: fixed;
+inset: 0;
+display: none;
+justify-content: center;
+align-items: center;
+flex-direction: column;
+text-align: center;
+background: radial-gradient(circle, #ffffff, #e8f5e9);
+z-index: 5;
+overflow: hidden;
+}
+.playAgain {
+margin-top: 20px;
+padding: 12px 20px;
+border: none;
+border-radius: 12px;
+background: #66bb6a;
+color: white;
+font-size: 16px;
+cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game" id="gameUI">
+<div class="topbar">
+<div>❤️ <span id="hp">100</span></div>
+<div>⏸ <span id="pause">3</span></div>
+<div>⏱ <span id="time">10</span>s</div>
+</div>
+
+<h2 id="scene"></h2>
+<div id="choices" class="choices"></div>
+
+<div class="controls">
+<button onclick="pauseGame()">⏸</button>
+<button onclick="restartGame()">🔄</button>
+<button onclick="exitGame()">❌</button>
+<button onclick="goBack()">⬅</button>
+</div>
+</div>
+
+<div class="celebration" id="celebration">
+<h1>🏆 You Survived!</h1>
+<p>You made smart, realistic decisions 🎉</p>
+<button class="playAgain" onclick="restartGame()">🔄 Play Again</button>
+</div>
+
+<script>
+let hp=100, pauseLeft=3, history=[], current="start", paused=false, time=10, timer;
+
+const scenes = {
+
+// START
+start:{text:"📺 News: Severe food shortage & supply chain collapse.",options:[
+{t:"🔒 Stay home & ration",n:"secure_home"},
+{t:"🏃 Rush to market",n:"crowd"},
+{t:"📞 Call authorities",n:"no_help"}
+]},
+
+// HOME
+secure_home:{text:"🔒 You secure your home.",effect:+5,options:[
+{t:"📦 Inventory food",n:"inventory"},
+{t:"📻 Listen updates",n:"radio"},
+{t:"😴 Ignore situation",n:"death"}
+]},
+
+inventory:{text:"📦 Limited supplies found.",options:[
+{t:"⚖ Ration strictly",n:"ration"},
+{t:"🍴 Eat normally",n:"waste"},
+{t:"🚪 Go out for more",n:"street"}
+]},
+
+ration:{text:"⚖ You ration food wisely.",effect:+10,options:[
+{t:"📻 Stay informed",n:"radio"},
+{t:"🚶 Search quietly",n:"stealth"},
+{t:"🤝 Coordinate neighbors",n:"neighbors"}
+]},
+
+waste:{text:"🍴 You waste food early.",effect:-20,options:[
+{t:"🚶 Find supplies",n:"street"},
+{t:"😵 Panic",n:"death"},
+{t:"🔒 Lockdown",n:"secure_home"}
+]},
+
+radio:{text:"📻 Govt relief camp announced.",options:[
+{t:"🗺 Plan route",n:"plan"},
+{t:"❌ Ignore",n:"street"},
+{t:"😴 Sleep",n:"death"}
+]},
+
+// COMMUNITY
+neighbors:{text:"🤝 Neighbors discuss survival.",effect:+5,options:[
+{t:"🤝 Share resources",n:"trust"},
+{t:"⚠ Distrust",n:"alone"},
+{t:"🚶 Leave group",n:"street"}
+]},
+
+trust:{text:"🤝 Cooperation improves survival.",effect:+10,options:[
+{t:"🚶 Travel together",n:"group_travel"},
+{t:"🏠 Stay safe",n:"secure_home"},
+{t:"⚠ Overdepend",n:"death"}
+]},
+
+alone:{text:"⚠ Alone is risky.",effect:-5,options:[
+{t:"🚶 Move alone",n:"street"},
+{t:"🔙 Return",n:"neighbors"},
+{t:"😵 Panic",n:"death"}
+]},
+
+// OUTSIDE
+street:{text:"🚧 Streets chaotic, shortages visible.",options:[
+{t:"🏃 Rush",n:"crowd"},
+{t:"🔍 Observe",n:"stealth"},
+{t:"🏠 Hide",n:"hide"}
+]},
+
+crowd:{text:"👥 Crowded market, risky.",effect:-10,options:[
+{t:"⚠ Push through",n:"injury"},
+{t:"🚶 Leave",n:"street"},
+{t:"🔍 Wait",n:"stealth"}
+]},
+
+injury:{text:"🤕 Injured in chaos.",effect:-20,options:[
+{t:"💊 Treat",n:"med"},
+{t:"🚶 Continue",n:"street"},
+{t:"😵 Collapse",n:"death"}
+]},
+
+stealth:{text:"👀 You move carefully.",effect:+5,options:[
+{t:"🏪 Find shop",n:"store"},
+{t:"🚶 Move quietly",n:"road"},
+{t:"🔙 Return",n:"secure_home"}
+]},
+
+hide:{text:"🏠 Temporary shelter.",effect:+5,options:[
+{t:"🔍 Search",n:"store"},
+{t:"😴 Stay long",n:"death"},
+{t:"🚶 Move",n:"street"}
+]},
+
+// RESOURCES
+store:{text:"🏪 Empty shop, some supplies left.",options:[
+{t:"🥫 Take essentials",n:"food"},
+{t:"⚠ Take everything",n:"death"},
+{t:"🔙 Leave",n:"street"}
+]},
+
+food:{text:"🥫 You collected food.",effect:+10,options:[
+{t:"🚶 Move",n:"road"},
+{t:"📦 Hoard more",n:"death"},
+{t:"🔙 Return home",n:"secure_home"}
+]},
+
+med:{text:"💊 You treat wounds.",effect:+10,options:[
+{t:"🚶 Continue",n:"road"},
+{t:"😴 Rest too long",n:"death"},
+{t:"🔙 Return",n:"street"}
+]},
+
+// TRAVEL
+road:{text:"🛣 Traveling towards relief zone.",options:[
+{t:"🚶 Walk steady",n:"fatigue"},
+{t:"🏃 Rush",n:"exhaust"},
+{t:"🚗 Find vehicle",n:"car_check"}
+]},
+
+fatigue:{text:"🥵 You feel tired.",effect:-10,options:[
+{t:"😌 Short rest",n:"rest"},
+{t:"🚶 Continue",n:"safe_zone"},
+{t:"❌ Stop",n:"death"}
+]},
+
+rest:{text:"😌 Quick rest helps.",effect:+5,options:[
+{t:"🚶 Continue",n:"safe_zone"},
+{t:"😴 Oversleep",n:"death"},
+{t:"🔙 Back",n:"road"}
+]},
+
+exhaust:{text:"🥵 Exhaustion hits hard.",effect:-20,options:[
+{t:"😌 Slow down",n:"fatigue"},
+{t:"🚶 Push",n:"death"},
+{t:"🔙 Return",n:"road"}
+]},
+
+// VEHICLE
+car_check:{text:"🚗 Found vehicle.",options:[
+{t:"🔑 Try start",n:"car_start"},
+{t:"⛽ Check fuel",n:"fuel"},
+{t:"🚶 Ignore",n:"road"}
+]},
+
+fuel:{text:"⛽ Low fuel.",options:[
+{t:"🔍 Find fuel",n:"fuel_find"},
+{t:"🚗 Risk drive",n:"car_fail"},
+{t:"🚶 Walk",n:"road"}
+]},
+
+fuel_find:{text:"⛽ Found some fuel.",effect:+5,options:[
+{t:"🚗 Drive",n:"drive"},
+{t:"📦 Oversearch",n:"death"},
+{t:"🔙 Back",n:"car_check"}
+]},
+
+car_start:{text:"🚗 Car works.",options:[
+{t:"🚗 Drive",n:"drive"},
+{t:"⚠ Noise draws danger",n:"death"},
+{t:"🔙 Exit",n:"road"}
+]},
+
+car_fail:{text:"🚗 Vehicle stopped.",options:[
+{t:"🚶 Walk",n:"road"},
+{t:"🏃 Panic",n:"death"},
+{t:"🔙 Retry",n:"car_check"}
+]},
+
+drive:{text:"🚗 Traveling faster.",effect:+10,options:[
+{t:"🛑 Drive safe",n:"safe_zone"},
+{t:"⚡ Speed reckless",n:"death"},
+{t:"🔙 Stop",n:"road"}
+]},
+
+// GROUP TRAVEL
+group_travel:{text:"👥 Traveling in group.",effect:+10,options:[
+{t:"🚶 Stay coordinated",n:"safe_zone"},
+{t:"⚠ Split group",n:"alone"},
+{t:"😴 Delay",n:"death"}
+]},
+
+// END
+safe_zone:{text:"🏥 Relief camp reached.",options:[
+{t:"➡ Enter safely",n:"win"},
+{t:"⚠ Ignore rules",n:"death"},
+{t:"🔙 Leave",n:"road"}
+]},
+
+// FAIL
+death:{text:"💀 You failed to survive.",options:[]},
+win:{text:"🏆 You survived wisely!",options:[]},
+no_help:{text:"📵 No response from authorities.",options:[
+{t:"🔒 Stay home",n:"secure_home"},
+{t:"🏃 Go out",n:"street"},
+{t:"😵 Panic",n:"death"}
+]}
+
+};
+
+function render(){
+if(paused)return;
+clearInterval(timer);
+
+if(current==="win"){
+showCelebration();
+return;
+}
+
+time=10;
+startTimer();
+
+let s=scenes[current];
+document.getElementById("scene").innerText=s.text;
+document.getElementById("hp").innerText=hp;
+document.getElementById("pause").innerText=pauseLeft;
+
+if(s.effect){
+hp+=s.effect;
+if(hp<=0){current="death";render();return;}
+}
+
+let c=document.getElementById("choices");
+c.innerHTML="";
+s.options.forEach(o=>{
+let b=document.createElement("button");
+b.innerText=o.t;
+b.onclick=()=>{history.push(current);current=o.n;render();};
+c.appendChild(b);
+});
+}
+
+function showCelebration(){
+document.getElementById("celebration").style.display="flex";
+}
+
+function startTimer(){
+timer=setInterval(()=>{
+time--;
+document.getElementById("time").innerText=time;
+if(time<=0){clearInterval(timer);alert("⏱ Time up!");restartGame();}
+},1000);
+}
+
+function pauseGame(){
+if(pauseLeft>0){
+paused=!paused;
+pauseLeft--;
+if(paused)clearInterval(timer);
+else startTimer();
+render();
+}else alert("No pause left");
+}
+
+function restartGame(){
+document.getElementById("celebration").style.display="none";
+hp=100;pauseLeft=3;history=[];current="start";paused=false;
+render();
+}
+
+function exitGame(){
+document.body.innerHTML="<h1 style='text-align:center'>Game Exited ❌</h1>";
+}
+
+function goBack(){
+if(history.length>0){
+current=history.pop();
+document.getElementById("celebration").style.display="none";
+render();
+}
+}
+
+render();
+</script>
+
+</body>
+</html>
