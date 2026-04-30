@@ -357,6 +357,16 @@ render();
 }
 }
 
+  function winGame() {
+  // your existing win logic...
+
+  // Notify hub
+  window.parent.postMessage({
+    type: "WIN",
+    game: "last"
+  }, "*");
+}
+  
 render();
 </script>
 
