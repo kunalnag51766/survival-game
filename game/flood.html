@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flood Survival Game</title>
+
+<style>
+* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+body {
+margin: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+color: #2d2d2d;
+overflow: hidden;
+}
+
+body::before {
+content: "";
+position: absolute;
+width: 200%;
+height: 200%;
+background: linear-gradient(120deg,#e3f2fd,#fce4ec,#e8f5e9);
+animation: bgMove 18s ease infinite;
+z-index: -1;
+}
+
+@keyframes bgMove {
+0% { transform: translate(0,0); }
+50% { transform: translate(-10%,-10%); }
+100% { transform: translate(0,0); }
+}
+
+.game {
+width: 95%;
+max-width: 650px;
+padding: 20px;
+border-radius: 18px;
+background: rgba(255,255,255,0.75);
+backdrop-filter: blur(12px);
+box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+position: relative;
+z-index: 2;
+}
+
+.topbar {
+display: flex;
+justify-content: space-between;
+font-size: 14px;
+}
+
+h2 { text-align: center; margin: 15px 0; }
+
+.choices button {
+width: 100%;
+padding: 12px;
+margin: 6px 0;
+border: none;
+border-radius: 12px;
+background: #eceff1;
+cursor: pointer;
+transition: 0.2s;
+}
+.choices button:hover { background: #cfd8dc; }
+
+.controls {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+}
+.controls button {
+flex: 1;
+padding: 10px;
+border-radius: 10px;
+border: none;
+background: #dde3e6;
+cursor: pointer;
+}
+
+.celebration {
+position: fixed;
+inset: 0;
+display: none;
+justify-content: center;
+align-items: center;
+flex-direction: column;
+text-align: center;
+background: radial-gradient(circle, #ffffff, #e8f5e9);
+z-index: 5;
+overflow: hidden;
+}
+
+.playAgain {
+margin-top: 20px;
+padding: 12px 20px;
+border: none;
+border-radius: 12px;
+background: #66bb6a;
+color: white;
+font-size: 16px;
+cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game" id="gameUI">
+  <div class="topbar">                        
+    <div>❤️ <span id="hp">100</span></div>                        
+    <div>⏸ <span id="pause">3</span></div>                        
+    <div>⏱ <span id="time">10</span>s</div>                        
+  </div>
+
+  <h2 id="scene"></h2>                        
+  <div id="choices" class="choices"></div>
+
+  <div class="controls">                        
+    <button onclick="pauseGame()">⏸</button>                        
+    <button onclick="restartGame()">🔄</button>                        
+    <button onclick="exitGame()">❌</button>                        
+    <button onclick="goBack()">⬅</button>                        
+  </div>                        
+</div>
+
+<div class="celebration" id="celebration">                        
+  <h1>🏆 You Survived the Flood!</h1>                        
+  <p>Smart real-life decisions saved you 🌊</p>                        
+  <button class="playAgain" onclick="restartGame()">🔄 Play Again</button>                        
+</div>
+
+<script>
+let hp=100, pauseLeft=3, history=[], current="start", paused=false, time=10, timer;
+
+const scenes = {
+
+// START
+start:{text:"🌧 Heavy rain warning. Flood alert issued.",options:[
+{t:"📻 Check official alerts",n:"alert"},
+{t:"😴 Ignore warning",n:"death"},
+{t:"🏃 Go outside to check",n:"street"}
+]},
+
+alert:{text:"📻 Water levels rising fast.",effect:+5,options:[
+{t:"📦 Prepare emergency kit",n:"kit"},
+{t:"🚗 Leave immediately",n:"road"},
+{t:"😴 Wait",n:"death"}
+]},
+
+kit:{text:"🎒 Packed water, torch, food.",effect:+10,options:[
+{t:"🏠 Move to higher floor",n:"upper"},
+{t:"🚗 Evacuate",n:"road"},
+{t:"📞 Call help",n:"no_signal"}
+]},
+
+upper:{text:"🏠 You moved upstairs.",effect:+5,options:[
+{t:"🔌 Turn off electricity",n:"power"},
+{t:"😴 Sleep",n:"death"},
+{t:"👀 Observe outside",n:"observe"}
+]},
+
+power:{text:"🔌 Power safely off.",effect:+5,options:[
+{t:"👀 Watch water level",n:"observe"},
+{t:"🚗 Evacuate",n:"road"},
+{t:"😴 Sleep",n:"death"}
+]},
+
+observe:{text:"🌊 Water entering ground floor.",options:[
+{t:"🚤 Use boat",n:"boat"},
+{t:"🏊 Swim out",n:"death"},
+{t:"📞 Signal for help",n:"rescue_wait"}
+]},
+
+rescue_wait:{text:"📡 Waiting for rescue.",effect:+5,options:[
+{t:"🚁 Signal helicopter",n:"heli"},
+{t:"😴 Sleep",n:"death"},
+{t:"🏃 Try escape",n:"street"}
+]},
+
+heli:{text:"🚁 Helicopter spotted you.",effect:+10,options:[
+{t:"🙋 Signal clearly",n:"win"},
+{t:"❌ Panic",n:"death"},
+{t:"🔙 Wait more",n:"rescue_wait"}
+]},
+
+// OUTSIDE
+street:{text:"🌧 Streets flooded.",options:[
+{t:"🚶 Walk through water",n:"shock"},
+{t:"🏃 Return home",n:"upper"},
+{t:"🔍 Find higher ground",n:"hill"}
+]},
+
+shock:{text:"⚡ Electric current risk!",effect:-20,options:[
+{t:"🏃 Move away fast",n:"hill"},
+{t:"😵 Panic",n:"death"},
+{t:"🚶 Continue",n:"death"}
+]},
+
+hill:{text:"⛰ Reached higher ground.",effect:+10,options:[
+{t:"🏕 Stay here",n:"safe_zone"},
+{t:"🚶 Search shelter",n:"shelter"},
+{t:"🔙 Go back",n:"street"}
+]},
+
+shelter:{text:"🏫 Found relief camp.",effect:+10,options:[
+{t:"➡ Enter",n:"win"},
+{t:"❌ Ignore",n:"death"},
+{t:"🔙 Leave",n:"hill"}
+]},
+
+// BOAT PATH
+boat:{text:"🚤 Using small boat.",options:[
+{t:"🚤 Navigate carefully",n:"navigate"},
+{t:"⚡ Rush fast",n:"death"},
+{t:"🔙 Stay",n:"upper"}
+]},
+
+navigate:{text:"🧭 Safe navigation.",effect:+10,options:[
+{t:"🏫 Go to camp",n:"shelter"},
+{t:"⛰ Go hill",n:"hill"},
+{t:"⚠ Ignore path",n:"death"}
+]},
+
+// ROAD
+road:{text:"🚗 Road partially flooded.",options:[
+{t:"🚗 Drive slowly",n:"drive"},
+{t:"⚡ Speed",n:"death"},
+{t:"🔙 Return",n:"upper"}
+]},
+
+drive:{text:"🚗 Engine struggling.",effect:-10,options:[
+{t:"🚗 Continue carefully",n:"safe_zone"},
+{t:"🚶 Exit vehicle",n:"hill"},
+{t:"😴 Stay",n:"death"}
+]},
+
+// SAFE ZONE
+safe_zone:{text:"🏕 You reached safe evacuation zone.",options:[
+{t:"➡ Register",n:"win"},
+{t:"❌ Leave",n:"death"},
+{t:"🔙 Go back",n:"hill"}
+]},
+
+// SIGNAL FAIL
+no_signal:{text:"📵 No signal available.",options:[
+{t:"🏃 Move outside",n:"street"},
+{t:"🔙 Stay upstairs",n:"upper"},
+{t:"😵 Panic",n:"death"}
+]},
+
+// FAIL
+death:{text:"💀 You made unsafe decision.",options:[]},
+win:{text:"🏆 You survived smartly!",options:[]}
+
+};
+
+function render(){
+if(paused)return;
+clearInterval(timer);
+
+if(current==="win"){
+showCelebration();
+return;
+}
+
+time=10;
+startTimer();
+
+let s=scenes[current];
+document.getElementById("scene").innerText=s.text;
+document.getElementById("hp").innerText=hp;
+document.getElementById("pause").innerText=pauseLeft;
+
+if(s.effect){
+hp+=s.effect;
+if(hp<=0){current="death";render();return;}
+}
+
+let c=document.getElementById("choices");
+c.innerHTML="";
+s.options.forEach(o=>{
+let b=document.createElement("button");
+b.innerText=o.t;
+b.onclick=()=>{history.push(current);current=o.n;render();};
+c.appendChild(b);
+});
+}
+
+function showCelebration(){
+document.getElementById("celebration").style.display="flex";
+}
+
+function startTimer(){
+timer=setInterval(()=>{
+time--;
+document.getElementById("time").innerText=time;
+if(time<=0){clearInterval(timer);alert("⏱ Time up!");restartGame();}
+},1000);
+}
+
+function pauseGame(){
+if(pauseLeft>0){
+paused=!paused;
+pauseLeft--;
+if(paused)clearInterval(timer);
+else startTimer();
+render();
+}else alert("No pause left");
+}
+
+function restartGame(){
+document.getElementById("celebration").style.display="none";
+hp=100;pauseLeft=3;history=[];current="start";paused=false;
+render();
+}
+
+function exitGame(){
+document.body.innerHTML="<h1 style='text-align:center'>Game Exited ❌</h1>";
+}
+
+function goBack(){
+if(history.length>0){
+current=history.pop();
+document.getElementById("celebration").style.display="none";
+render();
+}
+}
+
+render();
+</script>
+
+</body>
+</html>
