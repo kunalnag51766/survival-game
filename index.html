@@ -6,226 +6,177 @@
 <title>Survival Game Hub</title>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', sans-serif;
-}
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
 
 body {
-  background: #0a0a0a;
-  color: white;
-  overflow: hidden;
+  background:#0a0a0a;
+  color:white;
+  overflow:hidden;
 }
 
-/* Welcome */
 #welcome {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  background: black;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 2rem;
-  animation: fadeOut 2.5s forwards;
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:black;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:2rem;
+  animation:fadeOut 2.5s forwards;
 }
 
 @keyframes fadeOut {
-  0% {opacity: 1;}
-  80% {opacity: 1;}
-  100% {opacity: 0; visibility: hidden;}
+  0%{opacity:1;}
+  80%{opacity:1;}
+  100%{opacity:0;visibility:hidden;}
 }
 
-/* Menu */
 #menu {
-  display: none;
-  padding: 15px;
-  height: 100vh;
-  overflow-y: auto;
+  display:none;
+  padding:15px;
+  height:100vh;
+  overflow-y:auto;
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
 }
 
 .game-btn {
-  position: relative;
-  background: #1a1a1a;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: 0.3s;
+  position:relative;
+  background:#1a1a1a;
+  padding:15px;
+  border-radius:12px;
+  text-align:center;
+  cursor:pointer;
+  transition:.3s;
 }
 
-.game-btn:hover {
-  background: #333;
-}
+.game-btn:hover { background:#333; }
 
-/* Tick */
 .tick {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  font-size: 18px;
-  color: #00ff88;
-  display: none;
+  position:absolute;
+  top:8px;
+  right:10px;
+  font-size:18px;
+  color:#00ff88;
+  display:none;
 }
 
-/* Game Viewer */
 #gameView {
-  display: none;
-  height: 100vh;
-  position: relative;
+  display:none;
+  height:100vh;
+  position:relative;
 }
 
 #gameFrame {
-  width: 100%;
-  height: 100%;
-  border: none;
+  width:100%;
+  height:100%;
+  border:none;
 }
 
 .back-btn {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: #222;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  z-index: 10;
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:#222;
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  z-index:10;
 }
 </style>
 </head>
 
 <body>
 
-<!-- Welcome -->
 <div id="welcome">Welcome Survivor...</div>
 
-<!-- Menu -->
 <div id="menu">
   <h2 style="margin-bottom:10px;">Choose Your Survival</h2>
   <div class="grid">
 
-    <div class="game-btn" id="zombieBtn" onclick="openGame('zombie')">
-      🧟 Zombie Attack <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="alienBtn" onclick="openGame('alien')">
-      👽 Alien Invasion <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="nuclearBtn" onclick="openGame('nuclear')">
-      ☢️ Nuclear Attack <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="lastBtn" onclick="openGame('last')">
-      🧍 Last Human <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="aiBtn" onclick="openGame('ai')">
-      🤖 AI Takeover <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="cycloneBtn" onclick="openGame('cyclone')">
-      🌪 Cyclone <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="iceBtn" onclick="openGame('ice')">
-      ❄️ Ice Age <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="heatBtn" onclick="openGame('heat')">
-      🔥 Heat Wave <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="empBtn" onclick="openGame('emp')">
-      📡 EMP Collapse <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="foodBtn" onclick="openGame('food')">
-      🍞 Food Crisis <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="floodBtn" onclick="openGame('flood')">
-      🌊 Flood <span class="tick">✔</span>
-    </div>
-
-    <div class="game-btn" id="virusBtn" onclick="openGame('virus')">
-      🦠 Virus Quarantine <span class="tick">✔</span>
-    </div>
+    <div class="game-btn" id="zombieBtn" onclick="openGame('zombie')">🧟 Zombie <span class="tick">✔</span></div>
+    <div class="game-btn" id="alienBtn" onclick="openGame('alien')">👽 Alien <span class="tick">✔</span></div>
+    <div class="game-btn" id="nuclearBtn" onclick="openGame('nuclear')">☢️ Nuclear <span class="tick">✔</span></div>
+    <div class="game-btn" id="lastBtn" onclick="openGame('last')">🧍 Last Human <span class="tick">✔</span></div>
+    <div class="game-btn" id="aiBtn" onclick="openGame('ai')">🤖 AI <span class="tick">✔</span></div>
+    <div class="game-btn" id="cycloneBtn" onclick="openGame('cyclone')">🌪 Cyclone <span class="tick">✔</span></div>
+    <div class="game-btn" id="iceBtn" onclick="openGame('ice')">❄️ Ice <span class="tick">✔</span></div>
+    <div class="game-btn" id="heatBtn" onclick="openGame('heat')">🔥 Heat <span class="tick">✔</span></div>
+    <div class="game-btn" id="empBtn" onclick="openGame('emp')">📡 EMP <span class="tick">✔</span></div>
+    <div class="game-btn" id="foodBtn" onclick="openGame('food')">🍞 Food <span class="tick">✔</span></div>
+    <div class="game-btn" id="floodBtn" onclick="openGame('flood')">🌊 Flood <span class="tick">✔</span></div>
+    <div class="game-btn" id="virusBtn" onclick="openGame('virus')">🦠 Virus <span class="tick">✔</span></div>
 
   </div>
 </div>
 
-<!-- Game Viewer -->
 <div id="gameView">
   <div class="back-btn" onclick="goBack()">⬅ Back</div>
   <iframe id="gameFrame"></iframe>
 </div>
 
 <script>
-// GAME URLS
 const GAMES = {
-  zombie: "game/zombie.html",
-  alien: "game/alien.html",
-  nuclear: "game/nuclear.html",
-  last: "game/last.html",
-  ai: "game/ai.html",
-  cyclone: "game/cyclone.html",
-  ice: "game/ice.html",
-  heat: "game/heat.html",
-  emp: "game/emp.html",
-  food: "game/food.html",
-  flood: "game/flood.html",
-  virus: "game/virus.html"
+  zombie:"game/zombie.html",
+  alien:"game/alien.html",
+  nuclear:"game/nuclear.html",
+  last:"game/last.html",
+  ai:"game/ai.html",
+  cyclone:"game/cyclone.html",
+  ice:"game/ice.html",
+  heat:"game/heat.html",
+  emp:"game/emp.html",
+  food:"game/food.html",
+  flood:"game/flood.html",
+  virus:"game/virus.html"
 };
 
-// Track wins (session only)
-let wins = {};
+let currentGame = null;
 
-// Show menu
-setTimeout(() => {
-  document.getElementById("menu").style.display = "block";
-}, 2500);
+setTimeout(()=>{
+  document.getElementById("menu").style.display="block";
+},2500);
 
-// Open game
-function openGame(name) {
+function openGame(name){
   currentGame = name;
-  document.getElementById("menu").style.display = "none";
-  document.getElementById("gameView").style.display = "block";
+  document.getElementById("menu").style.display="none";
+  document.getElementById("gameView").style.display="block";
   document.getElementById("gameFrame").src = GAMES[name];
 }
 
-// Back
-function goBack() {
-  document.getElementById("gameView").style.display = "none";
-  document.getElementById("menu").style.display = "block";
-  document.getElementById("gameFrame").src = "";
+function goBack(){
+  document.getElementById("gameView").style.display="none";
+  document.getElementById("menu").style.display="block";
+  document.getElementById("gameFrame").src="";
 }
 
-// Listen win signal from game
-window.addEventListener("message", (e) => {
-  if (e.data === "WIN") {
-    wins[currentGame] = true;
-    updateTick(currentGame);
+/* ✅ ROBUST LISTENER */
+window.addEventListener("message",(e)=>{
+  console.log("Message received:", e.data);
+
+  // Accept multiple formats
+  if(
+    e.data === "WIN" ||
+    e.data === "win" ||
+    (typeof e.data === "object" && e.data.type === "WIN")
+  ){
+    markWin(currentGame);
   }
 });
 
-// Update tick UI
-function updateTick(game) {
-  const btn = document.getElementById(game + "Btn");
-  if (btn) {
-    btn.querySelector(".tick").style.display = "inline";
+function markWin(game){
+  if(!game) return;
+
+  const btn = document.getElementById(game+"Btn");
+  if(btn){
+    btn.querySelector(".tick").style.display="inline";
   }
 }
-
-let currentGame = null;
 </script>
 
 </body>
