@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Last Human Survival Game</title>
+<style>
+* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+body {
+margin: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+color: #2d2d2d;
+overflow: hidden;
+}
+
+body::before {
+content: "";
+position: absolute;
+width: 200%;
+height: 200%;
+background: linear-gradient(120deg,#e3f2fd,#fce4ec,#e8f5e9);
+animation: bgMove 18s ease infinite;
+z-index: -1;
+}
+@keyframes bgMove {
+0% { transform: translate(0,0); }
+50% { transform: translate(-10%,-10%); }
+100% { transform: translate(0,0); }
+}
+
+.game {
+width: 95%;
+max-width: 650px;
+padding: 20px;
+border-radius: 18px;
+background: rgba(255,255,255,0.75);
+backdrop-filter: blur(12px);
+box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+position: relative;
+z-index: 2;
+}
+
+.topbar {
+display: flex;
+justify-content: space-between;
+font-size: 14px;
+}
+
+h2 { text-align: center; margin: 15px 0; }
+
+.choices button {
+width: 100%;
+padding: 12px;
+margin: 6px 0;
+border: none;
+border-radius: 12px;
+background: #eceff1;
+cursor: pointer;
+transition: 0.2s;
+}
+.choices button:hover { background: #cfd8dc; }
+
+.controls {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+}
+.controls button {
+flex: 1;
+padding: 10px;
+border-radius: 10px;
+border: none;
+background: #dde3e6;
+cursor: pointer;
+}
+
+.celebration {
+position: fixed;
+inset: 0;
+display: none;
+justify-content: center;
+align-items: center;
+flex-direction: column;
+text-align: center;
+background: radial-gradient(circle, #ffffff, #e8f5e9);
+z-index: 5;
+overflow: hidden;
+}
+
+.playAgain {
+margin-top: 20px;
+padding: 12px 20px;
+border: none;
+border-radius: 12px;
+background: #66bb6a;
+color: white;
+font-size: 16px;
+cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="game" id="gameUI">
+  <div class="topbar">
+    <div>❤️ <span id="hp">100</span></div>
+    <div>⏸ <span id="pause">3</span></div>
+    <div>⏱ <span id="time">10</span>s</div>
+  </div>
+
+  <h2 id="scene"></h2>
+  <div id="choices" class="choices"></div>
+
+  <div class="controls">
+    <button onclick="pauseGame()">⏸</button>
+    <button onclick="restartGame()">🔄</button>
+    <button onclick="exitGame()">❌</button>
+    <button onclick="goBack()">⬅</button>
+  </div>
+</div>
+
+<div class="celebration" id="celebration">
+  <h1>🌍 You Survived!</h1>
+  <p>You became the last sustainable human 🎉</p>
+  <button class="playAgain" onclick="restartGame()">🔄 Play Again</button>
+</div>
+
+<script>
+let hp=100, pauseLeft=3, history=[], current="start", paused=false, time=10, timer;
+
+const scenes = {
+
+// START
+start:{text:"😐 Silence everywhere. No humans left.",options:[
+{t:"🔒 Secure home",n:"secure_home"},
+{t:"🔍 Explore outside",n:"street"},
+{t:"📻 Check signals",n:"radio"}
+]},
+
+secure_home:{text:"🔒 Home secured.",effect:+5,options:[
+{t:"📦 Gather essentials",n:"gather"},
+{t:"💧 Check water",n:"water_check"},
+{t:"😴 Sleep",n:"death"}
+]},
+
+gather:{text:"🎒 Food + tools collected.",effect:+10,options:[
+{t:"🚪 Go outside",n:"street"},
+{t:"🔒 Stay",n:"starve"},
+{t:"🧭 Plan long survival",n:"plan"}
+]},
+
+water_check:{text:"💧 Water limited.",options:[
+{t:"🔥 Boil water",n:"boil"},
+{t:"🚰 Drink raw",n:"death"},
+{t:"🔍 Find source",n:"search_water"}
+]},
+
+boil:{text:"🔥 Water purified.",effect:+10,options:[
+{t:"🧭 Plan future",n:"plan"},
+{t:"🚶 Move out",n:"street"},
+{t:"😴 Rest",n:"rest"}
+]},
+
+search_water:{text:"🚶 Found river.",options:[
+{t:"💧 Boil water",n:"boil"},
+{t:"🚰 Drink raw",n:"death"},
+{t:"🔙 Return",n:"secure_home"}
+]},
+
+radio:{text:"📻 No response. Static only.",options:[
+{t:"🔍 Explore",n:"street"},
+{t:"🔒 Stay",n:"secure_home"},
+{t:"😵 Panic",n:"death"}
+]},
+
+plan:{text:"🧭 Planning long-term survival.",effect:+5,options:[
+{t:"🌾 Grow food",n:"farm"},
+{t:"🚗 Travel",n:"car_check"},
+{t:"🏠 Stay base",n:"secure_home"}
+]},
+
+farm:{text:"🌾 Small farm started.",effect:+15,options:[
+{t:"💧 Manage water",n:"water_check"},
+{t:"🔧 Build shelter",n:"shelter"},
+{t:"😴 Ignore crops",n:"death"}
+]},
+
+shelter:{text:"🏠 Shelter improved.",effect:+10,options:[
+{t:"🔥 Start fire system",n:"fire"},
+{t:"🔍 Explore further",n:"road"},
+{t:"😴 Rest",n:"rest"}
+]},
+
+fire:{text:"🔥 Fire secured.",effect:+10,options:[
+{t:"🍳 Cook food",n:"cook"},
+{t:"❌ Ignore",n:"death"},
+{t:"🔙 Back",n:"shelter"}
+]},
+
+cook:{text:"🍳 Food cooked safely.",effect:+10,options:[
+{t:"🚶 Explore",n:"road"},
+{t:"😴 Rest",n:"rest"},
+{t:"🔙 Stay",n:"secure_home"}
+]},
+
+street:{text:"🏙 Empty world.",options:[
+{t:"🔍 Search buildings",n:"search"},
+{t:"🚶 Walk far",n:"fatigue"},
+{t:"🔙 Return",n:"secure_home"}
+]},
+
+search:{text:"🏢 Supplies found.",effect:+5,options:[
+{t:"📦 Take useful",n:"gather"},
+{t:"⚠ Take all",n:"death"},
+{t:"🚶 Move",n:"road"}
+]},
+
+road:{text:"🛣 Long empty road.",options:[
+{t:"🚗 Find vehicle",n:"car_check"},
+{t:"🚶 Walk",n:"fatigue"},
+{t:"🏃 Rush",n:"death"}
+]},
+
+fatigue:{text:"🥵 Exhausted.",effect:-10,options:[
+{t:"😴 Rest",n:"rest"},
+{t:"🚶 Continue",n:"safe_zone"},
+{t:"❌ Stop",n:"death"}
+]},
+
+rest:{text:"😌 Recovery.",effect:+5,options:[
+{t:"🚶 Continue",n:"safe_zone"},
+{t:"😴 Sleep long",n:"death"},
+{t:"🔙 Back",n:"road"}
+]},
+
+car_check:{text:"🚗 Found vehicle.",options:[
+{t:"⛽ Check fuel",n:"fuel"},
+{t:"🔑 Start engine",n:"car_start"},
+{t:"❌ Ignore",n:"road"}
+]},
+
+fuel:{text:"⛽ Low fuel.",options:[
+{t:"🔍 Search fuel",n:"fuel_find"},
+{t:"🚗 Risk drive",n:"car_fail"},
+{t:"🚶 Walk",n:"road"}
+]},
+
+fuel_find:{text:"⛽ Found fuel.",effect:+5,options:[
+{t:"🚗 Drive",n:"drive"},
+{t:"📦 Overload",n:"death"},
+{t:"🔙 Back",n:"car_check"}
+]},
+
+car_start:{text:"🚗 Engine works.",options:[
+{t:"🚗 Drive",n:"drive"},
+{t:"⚠ Noise attract risk",n:"death"},
+{t:"🔙 Exit",n:"road"}
+]},
+
+car_fail:{text:"🚗 Car broke.",options:[
+{t:"🚶 Walk",n:"road"},
+{t:"😴 Stay",n:"death"},
+{t:"🏃 Move fast",n:"fatigue"}
+]},
+
+drive:{text:"🚗 Traveling safely.",effect:+10,options:[
+{t:"🛑 Stop wisely",n:"safe_zone"},
+{t:"⚡ Reckless drive",n:"death"},
+{t:"🔙 Exit",n:"road"}
+]},
+
+safe_zone:{text:"🏞 You found a sustainable area.",options:[
+{t:"🏠 Settle",n:"win"},
+{t:"❌ Ignore",n:"death"},
+{t:"🔙 Leave",n:"road"}
+]},
+
+starve:{text:"🥶 No food. You died.",options:[]},
+death:{text:"💀 You died.",options:[]},
+win:{text:"🏆 You survived as last human!",options:[]}
+
+};
+
+function render(){
+if(paused)return;
+clearInterval(timer);
+
+if(current==="win"){
+showCelebration();
+return;
+}
+
+time=10;
+startTimer();
+
+let s=scenes[current];
+document.getElementById("scene").innerText=s.text;
+document.getElementById("hp").innerText=hp;
+document.getElementById("pause").innerText=pauseLeft;
+
+if(s.effect){
+hp+=s.effect;
+if(hp<=0){current="death";render();return;}
+}
+
+let c=document.getElementById("choices");
+c.innerHTML="";
+s.options.forEach(o=>{
+let b=document.createElement("button");
+b.innerText=o.t;
+b.onclick=()=>{history.push(current);current=o.n;render();};
+c.appendChild(b);
+});
+}
+
+function showCelebration(){
+document.getElementById("celebration").style.display="flex";
+}
+
+function startTimer(){
+timer=setInterval(()=>{
+time--;
+document.getElementById("time").innerText=time;
+if(time<=0){clearInterval(timer);alert("⏱ Time up!");restartGame();}
+},1000);
+}
+
+function pauseGame(){
+if(pauseLeft>0){
+paused=!paused;
+pauseLeft--;
+if(paused)clearInterval(timer);
+else startTimer();
+render();
+}else alert("No pause left");
+}
+
+function restartGame(){
+document.getElementById("celebration").style.display="none";
+hp=100;pauseLeft=3;history=[];current="start";paused=false;
+render();
+}
+
+function exitGame(){
+document.body.innerHTML="<h1 style='text-align:center'>Game Exited ❌</h1>";
+}
+
+function goBack(){
+if(history.length>0){
+current=history.pop();
+document.getElementById("celebration").style.display="none";
+render();
+}
+}
+
+render();
+</script>
+
+</body>
+</html>
