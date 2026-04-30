@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virus Survival Game</title>
+
+<style>
+* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+body {
+margin: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+color: #2d2d2d;
+overflow: hidden;
+}
+
+body::before {
+content: "";
+position: absolute;
+width: 200%;
+height: 200%;
+background: linear-gradient(120deg,#e3f2fd,#fce4ec,#e8f5e9);
+animation: bgMove 18s ease infinite;
+z-index: -1;
+}
+
+@keyframes bgMove {
+0% { transform: translate(0,0); }
+50% { transform: translate(-10%,-10%); }
+100% { transform: translate(0,0); }
+}
+
+.game {
+width: 95%;
+max-width: 650px;
+padding: 20px;
+border-radius: 18px;
+background: rgba(255,255,255,0.75);
+backdrop-filter: blur(12px);
+box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+position: relative;
+z-index: 2;
+}
+
+.topbar {
+display: flex;
+justify-content: space-between;
+font-size: 14px;
+}
+
+h2 { text-align: center; margin: 15px 0; }
+
+.choices button {
+width: 100%;
+padding: 12px;
+margin: 6px 0;
+border: none;
+border-radius: 12px;
+background: #eceff1;
+cursor: pointer;
+transition: 0.2s;
+}
+.choices button:hover { background: #cfd8dc; }
+
+.controls {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+}
+.controls button {
+flex: 1;
+padding: 10px;
+border-radius: 10px;
+border: none;
+background: #dde3e6;
+cursor: pointer;
+}
+
+.celebration {
+position: fixed;
+inset: 0;
+display: none;
+justify-content: center;
+align-items: center;
+flex-direction: column;
+text-align: center;
+background: radial-gradient(circle, #ffffff, #e8f5e9);
+z-index: 5;
+overflow: hidden;
+}
+
+.playAgain {
+margin-top: 20px;
+padding: 12px 20px;
+border: none;
+border-radius: 12px;
+background: #66bb6a;
+color: white;
+font-size: 16px;
+cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game" id="gameUI">
+
+<div class="topbar">
+<div>❤️ <span id="hp">100</span></div>
+<div>⏸ <span id="pause">3</span></div>
+<div>⏱ <span id="time">10</span>s</div>
+</div>
+
+<h2 id="scene"></h2>
+<div id="choices" class="choices"></div>
+
+<div class="controls">
+<button onclick="pauseGame()">⏸</button>
+<button onclick="restartGame()">🔄</button>
+<button onclick="exitGame()">❌</button>
+<button onclick="goBack()">⬅</button>
+</div>
+
+</div>
+
+<div class="celebration" id="celebration">
+<h1>🏆 You Survived!</h1>
+<p>You followed real quarantine survival decisions 🎉</p>
+<button class="playAgain" onclick="restartGame()">🔄 Play Again</button>
+</div>
+
+<script>
+let hp=100, pauseLeft=3, history=[], current="start", paused=false, time=10, timer;
+
+const scenes = {
+
+// START
+start:{text:"🦠 News: Unknown airborne virus spreading rapidly.",options:[
+{t:"🚪 Seal house",n:"lockdown"},
+{t:"🏃 Panic outside",n:"crowd"},
+{t:"📞 Call hospital",n:"helpline"}
+]},
+
+// HOME CONTROL
+lockdown:{text:"🔒 You begin home quarantine.",effect:+5,options:[
+{t:"🧼 Sanitize house",n:"sanitize"},
+{t:"📦 Check supplies",n:"supplies"},
+{t:"😴 Ignore risk",n:"death"}
+]},
+
+sanitize:{text:"🧼 Cleaning reduces infection risk.",effect:+10,options:[
+{t:"😷 Wear mask",n:"mask"},
+{t:"🚪 Open windows",n:"ventilation"},
+{t:"❌ Skip hygiene",n:"infection"}
+]},
+
+mask:{text:"😷 Mask ready.",effect:+5,options:[
+{t:"🏠 Stay isolated",n:"isolation"},
+{t:"🚶 Step outside",n:"exposure"},
+{t:"📦 Prepare kit",n:"kit"}
+]},
+
+ventilation:{text:"🌬 Fresh air helps reduce viral load.",effect:+5,options:[
+{t:"🏠 Stay inside",n:"isolation"},
+{t:"🚶 Go outside",n:"exposure"},
+{t:"📦 Gather supplies",n:"supplies"}
+]},
+
+supplies:{text:"📦 You check essentials.",effect:+5,options:[
+{t:"🥫 Store food",n:"food"},
+{t:"💊 Prepare medicine",n:"medicine"},
+{t:"🏃 Go shopping",n:"crowd"}
+]},
+
+food:{text:"🥫 Food secured.",effect:+10,options:[
+{t:"🏠 Continue isolation",n:"isolation"},
+{t:"📦 Stock more",n:"crowd"},
+{t:"😴 Relax",n:"fatigue"}
+]},
+
+medicine:{text:"💊 Basic meds ready.",effect:+10,options:[
+{t:"🏠 Stay safe",n:"isolation"},
+{t:"📞 Consult doctor",n:"helpline"},
+{t:"🚶 Go pharmacy",n:"crowd"}
+]},
+
+kit:{text:"🎒 Emergency kit prepared.",effect:+10,options:[
+{t:"🏠 Stay prepared",n:"isolation"},
+{t:"🚶 Explore outside",n:"exposure"},
+{t:"📻 Listen news",n:"news"}
+]},
+
+news:{text:"📻 Govt announces quarantine zones.",options:[
+{t:"📍 Follow rules",n:"isolation"},
+{t:"❌ Ignore",n:"crowd"},
+{t:"🚶 Escape city",n:"travel"}
+]},
+
+// ISOLATION
+isolation:{text:"🏠 Strict isolation keeps you safe.",effect:+10,options:[
+{t:"🧼 Maintain hygiene",n:"sanitize"},
+{t:"📻 Stay informed",n:"news"},
+{t:"😴 Become careless",n:"infection"}
+]},
+
+// RISK
+crowd:{text:"👥 Crowded area = high infection risk.",effect:-20,options:[
+{t:"🏃 Leave quickly",n:"escape"},
+{t:"😷 Stay cautious",n:"mask"},
+{t:"😵 Panic",n:"death"}
+]},
+
+exposure:{text:"⚠ Exposure to unknown carriers.",effect:-15,options:[
+{t:"🏠 Return home",n:"isolation"},
+{t:"🧼 Clean immediately",n:"sanitize"},
+{t:"❌ Ignore",n:"infection"}
+]},
+
+infection:{text:"🤒 You got infected.",effect:-30,options:[
+{t:"💊 Treat early",n:"treatment"},
+{t:"🏥 Go hospital",n:"hospital"},
+{t:"😴 Ignore symptoms",n:"death"}
+]},
+
+// MEDICAL
+helpline:{text:"📞 Doctors advise isolation.",options:[
+{t:"🏠 Follow advice",n:"isolation"},
+{t:"❌ Ignore",n:"crowd"},
+{t:"💊 Self treat",n:"treatment"}
+]},
+
+treatment:{text:"💊 Early treatment helps recovery.",effect:+10,options:[
+{t:"🏠 Rest",n:"recovery"},
+{t:"🏥 Hospital",n:"hospital"},
+{t:"🚶 Go outside",n:"infection"}
+]},
+
+hospital:{text:"🏥 Overcrowded hospital risk.",effect:-10,options:[
+{t:"🏠 Return home",n:"isolation"},
+{t:"💊 Get treated",n:"recovery"},
+{t:"😵 Panic",n:"death"}
+]},
+
+recovery:{text:"😊 You recover slowly.",effect:+20,options:[
+{t:"🏠 Stay safe",n:"safe_zone"},
+{t:"🚶 Go out early",n:"infection"},
+{t:"📻 Stay updated",n:"news"}
+]},
+
+// TRAVEL
+travel:{text:"🚗 Travel spreads infection.",effect:-15,options:[
+{t:"🏠 Return",n:"isolation"},
+{t:"🚗 Continue",n:"infection"},
+{t:"😵 Panic",n:"death"}
+]},
+
+escape:{text:"🏃 You escaped crowd safely.",effect:+5,options:[
+{t:"🏠 Isolate",n:"isolation"},
+{t:"🧼 Clean up",n:"sanitize"},
+{t:"🚶 Go back",n:"crowd"}
+]},
+
+fatigue:{text:"😴 Fatigue weakens immunity.",effect:-10,options:[
+{t:"😴 Rest",n:"recovery"},
+{t:"🚶 Ignore",n:"infection"},
+{t:"💊 Medicate",n:"treatment"}
+]},
+
+// FINAL
+safe_zone:{text:"🏆 You survived quarantine safely.",options:[
+{t:"➡ Continue safety",n:"win"},
+{t:"❌ Ignore rules",n:"death"},
+{t:"🔙 Risk again",n:"crowd"}
+]},
+
+// FAIL
+death:{text:"💀 You failed to survive the outbreak.",options:[]},
+win:{text:"🏆 You survived the virus outbreak smartly!",options:[]}
+
+};
+
+function render(){
+if(paused)return;
+clearInterval(timer);
+
+if(current==="win"){
+showCelebration();
+return;
+}
+
+time=10;
+startTimer();
+
+let s=scenes[current];
+document.getElementById("scene").innerText=s.text;
+document.getElementById("hp").innerText=hp;
+document.getElementById("pause").innerText=pauseLeft;
+
+if(s.effect){
+hp+=s.effect;
+if(hp<=0){current="death";render();return;}
+}
+
+let c=document.getElementById("choices");
+c.innerHTML="";
+s.options.forEach(o=>{
+let b=document.createElement("button");
+b.innerText=o.t;
+b.onclick=()=>{history.push(current);current=o.n;render();};
+c.appendChild(b);
+});
+}
+
+function showCelebration(){
+document.getElementById("celebration").style.display="flex";
+}
+
+function startTimer(){
+timer=setInterval(()=>{
+time--;
+document.getElementById("time").innerText=time;
+if(time<=0){clearInterval(timer);alert("⏱ Time up!");restartGame();}
+},1000);
+}
+
+function pauseGame(){
+if(pauseLeft>0){
+paused=!paused;
+pauseLeft--;
+if(paused)clearInterval(timer);
+else startTimer();
+render();
+}else alert("No pause left");
+}
+
+function restartGame(){
+document.getElementById("celebration").style.display="none";
+hp=100;pauseLeft=3;history=[];current="start";paused=false;
+render();
+}
+
+function exitGame(){
+document.body.innerHTML="<h1 style='text-align:center'>Game Exited ❌</h1>";
+}
+
+function goBack(){
+if(history.length>0){
+current=history.pop();
+document.getElementById("celebration").style.display="none";
+render();
+}
+}
+
+render();
+</script>
+
+</body>
+</html>
